@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Text Encryption/Decryption Tool</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            line-height: 1.6;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+            color: #333;
+        }
+        
+        h1 {
+            text-align: center;
+            color: #2c3e50;
+            margin-bottom: 30px;
+        }
+        
+        .container {
+            background-color: white;
+            padding: 25px;
+            border-radius: 8px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        textarea {
+            width: 100%;
+            min-height: 150px;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            resize: vertical;
+            font-family: monospace;
+            margin-bottom: 15px;
+        }
+        
+        .controls {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        button {
+            padding: 10px 15px;
+            background-color: #3498db;
+            color: white;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: background-color 0.3s;
+        }
+        
+        button:hover {
+            background-color: #2980b9;
+        }
+        
+        input[type="number"], input[type="text"] {
+            padding: 8px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+        }
+        
+        .key-group {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .result-container {
+            margin-top: 20px;
+        }
+        
+        .copy-btn {
+            background-color: #27ae60;
+        }
+        
+        .copy-btn:hover {
+            background-color: #219653;
+        }
+        
+        .info {
+            margin-top: 30px;
+            padding: 15px;
+            background-color: #f8f9fa;
+            border-radius: 4px;
+            font-size: 0.9em;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Text Encryption/Decryption Tool</h1>
+        
+        <div>
+            <label for="originalText"><strong>Original Text:</strong></label>
+            <textarea id="originalText" placeholder="Enter text to encrypt or paste encrypted text to decrypt"></textarea>
+        </div>
+        
+        <div class="controls">
+            <div class="key-group">
+                <label for="key">Encryption Key:</label>
+                <input type="text" id="key" placeholder="Secret key" value="mySecretKey123">
+            </div>
+            
+            <div class="key-group">
+                <label for="shift">Shift Value:</label>
+                <input type="number" id="shift" min="1" max="100" value="7">
+            </div>
+            
+            <button id="encryptBtn">Encrypt</button>
+            <button id="decryptBtn">Decrypt</button>
+            <button id="copyBtn" class="copy-btn">Copy Result</button>
+        </div>
+        
+        <div class="result-container">
+            <label for="resultText"><strong>Result:</strong></label>
+            <textarea id="resultText" readonly></textarea>
+        </div>
+        
+        <div class="info">
+            <h3>How to use:</h3>
+            <p>1. Enter your text in the top box</p>
+            <p>2. Set an encryption key (keep it secret!)</p>
+            <p>3. Choose a shift value (1-100)</p>
+            <p>4. Click "Encrypt" to encrypt your text</p>
+            <p>5. To decrypt, paste the encrypted text and click "Decrypt" using the same key and shift value</p>
+            <p><strong>Note:</strong> You must use the same key and shift value to decrypt successfully.</p>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const encryptBtn = document.getElementById('encryptBtn');
+            const decryptBtn = document.getElementById('decryptBtn');
+            const copyBtn = document.getElementById('copyBtn');
+            const originalText = document.getElementById('originalText');
+            const resultText = document.getElementById('resultText');
+            const keyInput = document.getElementById('key');
+            const shiftInput = document.getElementById('shift');
+            
+            // Encryption function
+            function encrypt(text, key, shift) {
+                // First layer: Caesar cipher with shift
+                let result = caesarCipher(text, shift);
+                
+                // Second layer: XOR with key
+                result = xorEncrypt(result, key);
+                
+                // Third layer: Base64 encoding
+                result = btoa(unescape(encodeURIComponent(result)));
+                
+                // Fourth layer: Reverse string
+                result = result.split('').reverse().join('');
+                
+                return result;
+            }
+            
+            // Decryption function
+            function decrypt(text, key, shift) {
+                try {
+                    // Reverse the fourth layer
+                    let result = text.split('').reverse().join('');
+                    
+                    // Reverse the third layer
+                    result = decodeURIComponent(escape(atob(result)));
+                    
+                    // Reverse the second layer
+                    result = xorEncrypt(result, key);
+                    
+                    // Reverse the first layer
+                    result = caesarCipher(result, -shift);
+                    
+                    return result;
+                } catch (e) {
+                    return "Decryption failed. Please check your key and shift value.";
+                }
+            }
+            
+            // Caesar cipher implementation
+            function caesarCipher(text, shift) {
+                return text.split('').map(char => {
+                    const code = char.charCodeAt(0);
+                    
+                    if (code >= 65 && code <= 90) { // Uppercase letters
+                        return String.fromCharCode(((code - 65 + shift + 26) % 26) + 65);
+                    } else if (code >= 97 && code <= 122) { // Lowercase letters
+                        return String.fromCharCode(((code - 97 + shift + 26) % 26) + 97);
+                    } else if (code >= 48 && code <= 57) { // Numbers
+                        return String.fromCharCode(((code - 48 + shift + 10) % 10) + 48);
+                    }
+                    return char;
+                }).join('');
+            }
+            
+            // XOR encryption
+            function xorEncrypt(text, key) {
+                return text.split('').map((char, i) => {
+                    const keyChar = key.charCodeAt(i % key.length);
+                    return String.fromCharCode(char.charCodeAt(0) ^ keyChar);
+                }).join('');
+            }
+            
+            // Event listeners
+            encryptBtn.addEventListener('click', function() {
+                const text = originalText.value;
+                const key = keyInput.value;
+                const shift = parseInt(shiftInput.value);
+                
+                if (!text) {
+                    alert('Please enter some text to encrypt');
+                    return;
+                }
+                
+                if (!key) {
+                    alert('Please enter an encryption key');
+                    return;
+                }
+                
+                resultText.value = encrypt(text, key, shift);
+            });
+            
+            decryptBtn.addEventListener('click', function() {
+                const text = originalText.value;
+                const key = keyInput.value;
+                const shift = parseInt(shiftInput.value);
+                
+                if (!text) {
+                    alert('Please enter some text to decrypt');
+                    return;
+                }
+                
+                if (!key) {
+                    alert('Please enter the decryption key');
+                    return;
+                }
+                
+                resultText.value = decrypt(text, key, shift);
+            });
+            
+            copyBtn.addEventListener('click', function() {
+                if (!resultText.value) {
+                    alert('No result to copy');
+                    return;
+                }
+                
+                resultText.select();
+                document.execCommand('copy');
+                
+                // Visual feedback
+                const originalText = copyBtn.textContent;
+                copyBtn.textContent = 'Copied!';
+                setTimeout(() => {
+                    copyBtn.textContent = originalText;
+                }, 2000);
+            });
+        });
+    </script>
+</body>
+</html>
